@@ -21,7 +21,7 @@ To add support for a new database type, write a new driver script. This is a nor
 
 - `title(self)`: Returns a page title, which should indicate the specific database being served
 - `query(self, query)`: Runs the query string specified by the `query` parameter, and returns a dict containing the following keys:
-  - In the case of success, `'headings` mapping to a list of column headings, and `result`, mapping to a list of rows, where each row is a list of values. The length of each row should be the same as that of the headings list.
+  - In the case of success, `headings` mapping to a list of column headings, and `result`, mapping to a list of rows, where each row is a list of values. The length of each row should be the same as that of the headings list.
   - In the case of error, `error` mapping to an error message.
   
 The driver script `dummy_worksheet` provides a trivial example.
