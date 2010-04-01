@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+#
+# Dummy driver file for SQL Worksheets
+# (c) 2010 Rob Hague
+
+from worksheet import *
+import sys
+
+class DummyDB:
+    """A dummy worksheet DB that merely echoes the queries"""
+
+    def title(self):
+        return 'Dummy Worksheet'
+
+    def query(self, query):
+        return { 'headings':['echo'], 'result': [query]}
+
+if __name__ == '__main__':
+    if len(sys.argv) == 1:
+        start_worksheet_server(DummyDB())
+    elif len(sys.argv) == 2:
+        start_worksheet_server(DummyDB(), sys.argv[1])
+    else:
+        print 'Usage: %s [<port>]' % sys.argv[0]

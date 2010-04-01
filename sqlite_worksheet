@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+#
+# Driver file for SQL Worksheets based on SQLite
+# (c) 2010 Rob Hague
+
+from worksheet import *
+import sqlite3, sys
+
+class SqliteDB:
+    """A Worksheet database object wrapping an SQLite 3 database"""
+    def __init__(self, filename):
+        self.conn = sqlite3.connect(filename)
+        self.filename = filename
+        
+    def __del__(self):
+        self.conn.close()
+
+    def query(self, query):
+        c = self.conn.cursor()
+        result = {}
+        try:
+            r =  c.execute(' '.join(query))
+            result['headings'] = [item[0] for item in r.description]
+            result['result'] = r.fetchall()
+        except Exception:
+            result['error'] = "SQL error: "+str(sys.exc_info()[1])
+        c.close()
+        return result
+
+    def title(self):
+        return self.filename+" (SQLite)";
+
+if __name__ == '__main__':
+    if len(sys.argv) == 2:
+        start_worksheet_server(SqliteDB(sys.argv[1]))
+    elif len(sys.argv) == 3:
+        start_worksheet_server(SqliteDB(sys.argv[1]), sys.argv[2])
+    else:
+        print 'Usage: %s <db_file> [<port>]' % sys.argv[0]
