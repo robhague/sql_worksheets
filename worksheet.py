@@ -3,9 +3,8 @@
 # SQL Worksheets - a simple interface for querying databases
 # (c) 2010 Rob Hague
 
-import re
-from cgi import parse_qs
-from wsgiref.simple_server import make_server
+import re, BaseHTTPServer, optparse, sys
+from urlparse import urlparse, parse_qs
 
 # HTML templates
 base_page_HTML = """<html>
@@ -54,42 +53,84 @@ def str_JSON(obj):
     escaping special characters."""
     return '"'+re.sub(r'[\\"]', r'\\\g<0>', str(obj))+'"'
 
-class WorksheetApp:
-    """A WSGI application to display an SQL worksheet"""
-    def __init__(self, db):
-        self.db = db
 
-    def __call__(self, environ, start_response):
-        """Respond to a single HTTP request; called by WSGI"""
-        path = environ['PATH_INFO']
-        params = parse_qs(environ.get('QUERY_STRING', ''))
-        content_length = int('0'+environ['CONTENT_LENGTH'])
-        post_params = parse_qs(environ['wsgi.input'].read(content_length))
-        
-        if params.has_key('resource'):
-            filename = params['resource'][0]
-            if re.match('^[A-Za-z._-]*$', filename):
-                start_response('200 OK', [('Content-type', 'text/plain')])
-                return open('resources/'+filename).read();
+def worksheet_handler(db, options):
+    """Create a worksheet request handler class, closed over a DB and
+    an object representing command line options."""
+
+    class WorksheetRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+        """A HTTP request handler to display an SQL worksheet"""
+
+        def allow_request(self):
+            if self.client_address[0] in options.accept:
+                return 1
             else:
-                start_response('404 Not found', [('Content-type','text,html')])
-                return not_found_HTML % {'resource': filename }
-        if post_params.has_key('sql_query'):
-            start_response('200 OK', [('Content-type', 'text/json')])
-            return to_JSON(self.db.query(post_params['sql_query']))
-        else:
-            start_response('200 OK', [('Content-type', 'text/html')])
-            return self.generate_base_page(path, params)
+                self.start_response(403, 'Forbidden', 'text/plain')
+                self.wfile.write("This server cannot be accessed remotely.")
+                return 0
 
-    def generate_base_page(self, path, params):
-        """Generate the initial HTML page"""
-        return base_page_HTML % {'title': self.db.title()}
+        def do_GET(self):
+            """Respond to a single HTTP request; called by the HTTP server"""
 
-def start_worksheet_server(db, port = 8000):
-    """Start a worksheet server on port 8000 with the given database object."""
-    httpd = make_server('', int(port), WorksheetApp(db))
-    print 'Serving on port '+str(port)+'...'
-    httpd.serve_forever() # Serve until process is killed
+            if self.allow_request():
+                params = parse_qs(urlparse(self.path).query)
+                
+                if params.has_key('resource'):
+                    filename = params['resource'][0]
+                    if re.match('^[A-Za-z._-]*$', filename):
+                        self.start_response(200, 'OK', 'text/plain')
+                        self.wfile.write(open('resources/'+filename).read());
+                    else:
+                        self.start_response(404, 'Not found', 'text/html')
+                        self.wfile.write(not_found_HTML % {'resource': filename})
+                else:
+                    self.start_response(200, 'OK', 'text/html')
+                    self.wfile.write(self.generate_base_page(self.path, params))
+
+        def do_POST(self):
+            if self.allow_request():
+                content_length = int(self.headers['Content-length'])
+                post_params = parse_qs(self.rfile.read(content_length))        
+            if post_params.has_key('sql_query'):
+                self.start_response(200, 'OK', 'text/plain')
+                self.wfile.write(to_JSON(db.query(post_params['sql_query'])))
+            else:
+                self.start_response(404, 'Not Found', 'text/plain')
+                self.wfile.write(not_found_HTML % {'resource': self.path})
+                
+        def start_response(self, code, msg, content_type):
+            self.send_response(code, msg)
+            self.send_header('Content-type', content_type)
+            self.end_headers()
+
+        def generate_base_page(self, path, params):
+            """Generate the initial HTML page"""
+            return base_page_HTML % {'title': db.title()}
+
+    return WorksheetRequestHandler 
+
+def start_worksheet_server(DbClass, args):
+    """Start a worksheet server of the given class"""
+
+    # Parse arguments
+    parser = optparse.OptionParser()
+    parser.add_option('-p', '--port', type='int', default=8000)
+    parser.add_option('-a', '--accept', action="append", default=['127.0.0.1'])
+    (options, args) = parser.parse_args(args[1:])
+
+    # Create a database, passing in the remaining arguments
+    try:
+        db = DbClass(*args)
+    except Exception as e:
+        print "Cannot instantiate DB: "+str(e)
+        exit(2)
+
+    # Start the HTTP server
+    print 'Serving on port '+str(options.port)+'...'
+    server_address = ('', options.port)
+    httpd = BaseHTTPServer.HTTPServer(server_address,
+                                      worksheet_handler(db, options))
+    httpd.serve_forever()
 
 # If the script is run directly, explain that a driver file is necessary
 if __name__ == '__main__':

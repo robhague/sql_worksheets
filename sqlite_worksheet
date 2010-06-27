@@ -4,16 +4,21 @@
 # (c) 2010 Rob Hague
 
 from worksheet import *
-import sqlite3, sys
+import sqlite3, sys, optparse
 
 class SqliteDB:
     """A Worksheet database object wrapping an SQLite 3 database"""
-    def __init__(self, filename):
-        self.conn = sqlite3.connect(filename)
-        self.filename = filename
+    def __init__(self, *args):
+        if len(args) == 0:
+            raise Exception("No DB filename supplied")
+        self.filename = args[0]
+        self.conn = sqlite3.connect(self.filename)
         
     def __del__(self):
-        self.conn.close()
+        try:
+            self.conn.close()
+        except:
+            pass
 
     def query(self, query):
         c = self.conn.cursor()
@@ -31,9 +36,4 @@ class SqliteDB:
         return self.filename+" (SQLite)";
 
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        start_worksheet_server(SqliteDB(sys.argv[1]))
-    elif len(sys.argv) == 3:
-        start_worksheet_server(SqliteDB(sys.argv[1]), sys.argv[2])
-    else:
-        print 'Usage: %s <db_file> [<port>]' % sys.argv[0]
+    start_worksheet_server(SqliteDB, sys.argv)
