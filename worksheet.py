@@ -115,14 +115,14 @@ def start_worksheet_server(DbClass, args):
     # Parse arguments
     parser = optparse.OptionParser()
     parser.add_option('-p', '--port', type='int', default=8000)
-    parser.add_option('-a', '--accept', action="append", default=['127.0.0.1'])
+    parser.add_option('-a', '--accept', action='append', default=['127.0.0.1'])
     (options, args) = parser.parse_args(args[1:])
 
     # Create a database, passing in the remaining arguments
     try:
         db = DbClass(*args)
     except Exception as e:
-        print "Cannot instantiate DB: "+str(e)
+        print 'Cannot instantiate DB: '+str(e)
         exit(2)
 
     # Start the HTTP server
