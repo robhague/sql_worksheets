@@ -17,12 +17,18 @@ function ajax_request(path, value, response) {
 }
 
 /**
- * Send a query for a given block.
+ * Process a given block
  */
-function send_query(blockID) {
+function process_block(blockID) {
     query = $('#block'+blockID+' > .query').val();
-    ajax_request('.', 'sql_query='+encodeURIComponent(query),
-                 receive_response(blockID));
+    if (query[0] == '?') {
+        // SQL query
+        ajax_request('.', 'sql_query='+encodeURIComponent(query.substring(1)),
+                     receive_response(blockID));
+    } else {
+        // Plain text
+        addBlockAfter(blockID);
+    }
 }
 
 /**
@@ -31,11 +37,20 @@ function send_query(blockID) {
 var add_query = function() {
     var nextID = 1;
     return function(afterSelector) {
-        $(afterSelector).after('<div class="sql_query" id="block'+nextID+'"><textarea class="query"></textarea> <input type="submit" value="=" onclick="send_query('+nextID+')" class="execute_query"><div class="answer"></div></div>');
+        $(afterSelector).after('<div class="sql_query" id="block'+nextID+'"><textarea class="query" onchange="process_block('+nextID+')"></textarea><div class="answer"></div></div>');
         $('#block'+nextID+' > .query').focus();
         nextID++;
     }
-}()
+}();
+
+function addBlockAfter(blockID) {
+  var afterID = blockID+1;
+  if ($('#block'+afterID).length == 0) {
+    add_query('#block'+blockID);
+  } else {
+    $('#block'+afterID+' > .query').focus();
+  }
+}
 
 /**
  * Update a block with the repsonse to a query
@@ -60,11 +75,8 @@ function receive_response(blockID) {
             }
             answerElement.html(result+'</table>');
             answerElement.removeClass('error');
-            if ($('#block'+(blockID+1)).length == 0) {
-                add_query('#block'+blockID);
-            } else {
-                $('#block'+afterID+' > .query').focus();
-            }
+            
+            addBlockAfter(blockID);
         } else {
             answerElement.text(String(answer['error']));
             answerElement.addClass('error');

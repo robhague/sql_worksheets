@@ -18,7 +18,11 @@ base_page_HTML = """<html>
   <body onload="add_query('#top')">
     <div class="watermark">Worksheet</div>
     <div class="title">%(title)s</div>
-    <a id="top">
+    <a id="top"></a>
+
+    <!-- There needs to be a link at the bottom of the page, to catch
+    the input focus as it leaves the last block. -->
+    <a href=".">Reload</a>
   </body>
 </html>
 """

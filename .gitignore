@@ -1,5 +1,6 @@
 # Don't check in compiled Python files
 *.pyc
 
-# Don't check in scratch SQLite databases
+# Don't check in scratch SQLite databases or HTML testbed
 *.sqlite
+testbed.html
