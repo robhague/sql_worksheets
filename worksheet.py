@@ -3,7 +3,7 @@
 # SQL Worksheets - a simple interface for querying databases
 # (c) 2010 Rob Hague
 
-import re, BaseHTTPServer, optparse, sys
+import re, BaseHTTPServer, optparse, sys, config, os
 from urlparse import urlparse, parse_qs
 
 # HTML templates
@@ -62,12 +62,31 @@ def worksheet_handler(db, options):
         """A HTTP request handler to display an SQL worksheet"""
 
         def allow_request(self):
-            if self.client_address[0] in options.accept:
-                return 1
-            else:
-                self.start_response(403, 'Forbidden', 'text/plain')
+            # Check request originates from a permitted host
+            if self.client_address[0] not in options.accept:
+                self.start_response(403, 'Forbidden',
+                                    {'Content-type' : 'text/plain'})
                 self.wfile.write("This server cannot be accessed remotely.")
                 return 0
+            
+            # Check authentication if necessary
+            if (options.basic_auth):
+                if self.headers.has_key('Authorization'):
+                    auth = self.headers['Authorization'].split(' ',1)
+                    target = (config.login+':'+config.password)
+                    target = target.encode('base64').strip()
+                    if (len(auth) == 2 and auth[0] == 'Basic' and
+                        auth[1] == target):
+                        return 1
+                    
+                self.start_response(
+                    401, 'Authorization Required',
+                    {'Content-type': 'text/plain',
+                     'WWW-Authenticate': 'Basic realm="Worksheet"'})
+                return 0
+
+            # OK
+            return 1
 
         def do_GET(self):
             """Respond to a single HTTP request; called by the HTTP server"""
@@ -78,13 +97,18 @@ def worksheet_handler(db, options):
                 if params.has_key('resource'):
                     filename = params['resource'][0]
                     if re.match('^[A-Za-z._-]*$', filename):
-                        self.start_response(200, 'OK', 'text/plain')
-                        self.wfile.write(open('resources/'+filename).read());
+                        filepath = os.path.join(os.path.dirname(sys.argv[0]),
+                                                'resources', filename)
+                        self.start_response(200, 'OK',
+                                            {'Content-type': 'text/plain'})
+                        self.wfile.write(open(filepath).read());
                     else:
-                        self.start_response(404, 'Not found', 'text/html')
+                        self.start_response(404, 'Not found',
+                                            {'Content-type': 'text/html'})
                         self.wfile.write(not_found_HTML % {'resource': filename})
                 else:
-                    self.start_response(200, 'OK', 'text/html')
+                    self.start_response(200, 'OK',
+                                        {'Content-type': 'text/html'})
                     self.wfile.write(self.generate_base_page(self.path, params))
 
         def do_POST(self):
@@ -92,15 +116,18 @@ def worksheet_handler(db, options):
                 content_length = int(self.headers['Content-length'])
                 post_params = parse_qs(self.rfile.read(content_length))        
             if post_params.has_key('sql_query'):
-                self.start_response(200, 'OK', 'text/plain')
+                self.start_response(200, 'OK',
+                                    {'Content-type': 'text/plain'})
                 self.wfile.write(to_JSON(db.query(post_params['sql_query'])))
             else:
-                self.start_response(404, 'Not Found', 'text/plain')
+                self.start_response(404, 'Not Found',
+                                    {'Content-type': 'text/plain'})
                 self.wfile.write(not_found_HTML % {'resource': self.path})
                 
-        def start_response(self, code, msg, content_type):
+        def start_response(self, code, msg, headers):
             self.send_response(code, msg)
-            self.send_header('Content-type', content_type)
+            for (k,v) in headers.items():
+                self.send_header(k,v)
             self.end_headers()
 
         def generate_base_page(self, path, params):
@@ -116,6 +143,7 @@ def start_worksheet_server(DbClass, args):
     parser = optparse.OptionParser()
     parser.add_option('-p', '--port', type='int', default=8000)
     parser.add_option('-a', '--accept', action='append', default=['127.0.0.1'])
+    parser.add_option('-b', '--basic-auth', action="store_true")
     (options, args) = parser.parse_args(args[1:])
 
     # Create a database, passing in the remaining arguments
