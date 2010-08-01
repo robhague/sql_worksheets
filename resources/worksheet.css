@@ -16,7 +16,7 @@ div.title {
 div.block {
     margin-bottom: 8px;
     padding-bottom: 2px;
-    border-left: 3px solid #ddd;
+    border-left: 4px solid #ddd;
     padding-left: 2px;
 }
 
@@ -26,12 +26,17 @@ textarea.query {
     border: 0px;
 }
 
-div.answer {
-    background: #afa;
+textarea.query:focus {
+    outline: none;
+    background: #eee;
+}
+
+div.value {
+    border-left: #afa 4px solid;
 }
 
 div.error {
-    background: #faa;
+    border-left: #faa 4px solid;
 }
 
 table.results {

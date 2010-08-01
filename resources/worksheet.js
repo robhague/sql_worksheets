@@ -79,8 +79,6 @@ function addBlockAfter(blockID) {
   var afterID = blockID+1;
   if ($('#block'+afterID).length == 0) {
     add_query('#block'+blockID);
-  } else {
-    $('#block'+afterID+' > .query').focus();
   }
 }
 
@@ -89,8 +87,9 @@ function addBlockAfter(blockID) {
  */
 function receive_response(blockID) {
     return function(answerJSON) {
-        queryElement = $('#block'+blockID+' > .query');
-        answerElement = $('#block'+blockID+' > .answer');
+        var blockElement = $('#block'+blockID);
+        var queryElement = $('#block'+blockID+' > .query');
+        var answerElement = $('#block'+blockID+' > .answer');
         var answer = json_parse(answerJSON);
         if (answer['result']) {
             var result = '<table class="results"><tr>';
@@ -106,12 +105,14 @@ function receive_response(blockID) {
                 result += '</tr>';
             }
             answerElement.html(result+'</table>');
-            answerElement.removeClass('error');
+            blockElement.removeClass('error');
+            blockElement.addClass('value');
             
             addBlockAfter(blockID);
         } else {
             answerElement.text(String(answer['error']));
-            answerElement.addClass('error');
+            blockElement.removeClass('value');
+            blockElement.addClass('error');
             queryElement.focus();
         }
     };
