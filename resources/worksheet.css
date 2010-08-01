@@ -13,14 +13,17 @@ div.title {
     font: 20pt sans-serif;
 }
 
-div.sql_query {
-    margin-bottom: 20px;
-    padding-right: 30px;
+div.block {
+    margin-bottom: 8px;
+    padding-bottom: 2px;
+    border-left: 3px solid #ddd;
+    padding-left: 2px;
 }
 
 textarea.query {
-    height: 75px;
+    resize: none; /* Disable Webkit textbox resizing. */
     width: 100%;
+    border: 0px;
 }
 
 div.answer {
