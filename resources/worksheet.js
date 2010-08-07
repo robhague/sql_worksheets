@@ -45,6 +45,24 @@ var resize_text_area = function() {
 		};
 }();
 
+function block_keyup() {
+    var query = this.value;
+    var blockElement = $(this.parentNode);
+
+    // Reset class back to default
+    blockElement.removeClass().addClass('block');
+
+    // Update the class according to the first character
+    switch (query[0]) {
+    case '#': // Header
+        blockElement.addClass('block-header'); break;
+    case '?': // SQL query
+        blockElement.addClass('block-remotequery'); break;
+    default:  // Plain text
+        blockElement.addClass('block-text');
+    }
+    resize_text_area.apply(this);
+}
 
 /**
  * Process a given block
@@ -53,24 +71,16 @@ function process_block(blockID) {
     var blockElement = $('#block'+blockID);
     var queryElement = blockElement.find('> .query');
     var query = queryElement.val();
-    
-    // Reset class back to default
-    blockElement.removeClass().addClass('block');
 
     var answer = "";
     switch (query[0]) {
-    case '#': // Header
-        blockElement.addClass('block-header');
-        break;
     case '?': // SQL query
         blockElement.addClass('block-remotequery');
         ajax_request('.', 'sql_query='+encodeURIComponent(query.substring(1)),
                      receive_response(blockID));
         hasAnswer = true;
         break;
-    default:
-        blockElement.addClass('block-text');
-        // Plain text
+    default: // Non-processing block
     }
     
     blockElement.find('> .answer').html(answer);
@@ -85,7 +95,7 @@ var add_query = function() {
     var nextID = 1;
     return function(afterSelector) {
         $(afterSelector).after('<div class="block" id="block'+nextID+'"><textarea class="query" rows="1" onchange="process_block('+nextID+')"></textarea><div class="answer"></div></div>');
-				$('#block'+nextID+' > .query').bind("keyup", resize_text_area)
+				$('#block'+nextID+' > .query').bind("keyup", block_keyup)
             .bind("focus", resize_text_area);
         $('#block'+nextID+' > .query').focus();
         nextID++;

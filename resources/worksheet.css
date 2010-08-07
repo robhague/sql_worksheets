@@ -16,7 +16,7 @@ div.title {
 div.block {
     margin-bottom: 8px;
     padding-bottom: 2px;
-    border-left: 4px solid #ddd;
+    border-left: 2px solid #ddd;
     padding-left: 2px;
 }
 
@@ -32,11 +32,11 @@ textarea.query:focus {
 }
 
 div.value {
-    border-left: #afa 4px solid;
+    border-left: #afa 2px solid;
 }
 
 div.error {
-    border-left: #faa 4px solid;
+    border-left: #faa 2px solid;
 }
 
 table.results {
@@ -63,7 +63,7 @@ table.results tr td {
 }
 
 .block-text > textarea {
-    font-family: sans-serif;
+    font: small sans-serif;
 }
 
 .block-remotequery > textarea {
