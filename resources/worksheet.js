@@ -50,15 +50,32 @@ var resize_text_area = function() {
  * Process a given block
  */
 function process_block(blockID) {
-    var query = $('#block'+blockID+' > .query').val();
-    if (query[0] == '?') {
-        // SQL query
+    var blockElement = $('#block'+blockID);
+    var queryElement = blockElement.find('> .query');
+    var query = queryElement.val();
+    
+    // Reset class back to default
+    blockElement.removeClass().addClass('block');
+
+    var answer = "";
+    switch (query[0]) {
+    case '#': // Header
+        blockElement.addClass('block-header');
+        break;
+    case '?': // SQL query
+        blockElement.addClass('block-remotequery');
         ajax_request('.', 'sql_query='+encodeURIComponent(query.substring(1)),
                      receive_response(blockID));
-    } else {
+        hasAnswer = true;
+        break;
+    default:
+        blockElement.addClass('block-text');
         // Plain text
-        addBlockAfter(blockID);
     }
+    
+    blockElement.find('> .answer').html(answer);
+
+    addBlockAfter(blockID);
 }
 
 /**
@@ -107,8 +124,6 @@ function receive_response(blockID) {
             answerElement.html(result+'</table>');
             blockElement.removeClass('error');
             blockElement.addClass('value');
-            
-            addBlockAfter(blockID);
         } else {
             answerElement.text(String(answer['error']));
             blockElement.removeClass('value');

@@ -54,3 +54,19 @@ table.results tr th {
 table.results tr td {
     background: #afa;
 }
+
+/* Block styles */
+
+.block-header > textarea {
+    color: #060;
+    font: large sans-serif;
+}
+
+.block-text > textarea {
+    font-family: sans-serif;
+}
+
+.block-remotequery > textarea {
+    color: #4a4;
+    font: monospace;
+}

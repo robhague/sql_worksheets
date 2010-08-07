@@ -21,7 +21,9 @@ base_page_HTML = """<html>
     <a id="top"></a>
 
     <!-- There needs to be a link at the bottom of the page, to catch
-    the input focus as it leaves the last block. -->
+    the input focus as it leaves the last block. Note that this
+    doesn't work on Safari or Chrome, so is only a temporary
+    solution. -->
     <a href=".">Reload</a>
   </body>
 </html>
