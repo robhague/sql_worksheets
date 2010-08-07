@@ -45,21 +45,25 @@ var resize_text_area = function() {
 		};
 }();
 
-function block_keyup() {
+function query_changed() {
     var query = this.value;
     var blockElement = $(this.parentNode);
 
     // Reset class back to default
-    blockElement.removeClass().addClass('block');
+    blockElement
+        .removeClass('b-header b-remotequery b-localquery b-text')
+        .addClass('block');
 
     // Update the class according to the first character
     switch (query[0]) {
     case '#': // Header
-        blockElement.addClass('block-header'); break;
+        blockElement.addClass('b-header'); break;
     case '?': // SQL query
-        blockElement.addClass('block-remotequery'); break;
+        blockElement.addClass('b-remotequery'); break;
+    case '=': // JavaScript query
+        blockElement.addClass('b-localquery'); break;
     default:  // Plain text
-        blockElement.addClass('block-text');
+        blockElement.addClass('b-text');
     }
     resize_text_area.apply(this);
 }
@@ -70,20 +74,29 @@ function block_keyup() {
 function process_block(blockID) {
     var blockElement = $('#block'+blockID);
     var queryElement = blockElement.find('> .query');
+    var answerElement = blockElement.find('> .answer');
     var query = queryElement.val();
+    answerElement.html('');
+    blockElement.removeClass('value error');
 
-    var answer = "";
     switch (query[0]) {
     case '?': // SQL query
-        blockElement.addClass('block-remotequery');
         ajax_request('.', 'sql_query='+encodeURIComponent(query.substring(1)),
                      receive_response(blockID));
-        hasAnswer = true;
+        break;
+    case '=': // Javascript expression
+        var answer;
+        try {
+            answer = eval(query.substring(1));
+            blockElement.addClass('value');
+        } catch (e) {
+            answer = ''+e;
+            blockElement.addClass('error');
+        }
+        answerElement.html(answer);
         break;
     default: // Non-processing block
     }
-    
-    blockElement.find('> .answer').html(answer);
 
     addBlockAfter(blockID);
 }
@@ -95,8 +108,8 @@ var add_query = function() {
     var nextID = 1;
     return function(afterSelector) {
         $(afterSelector).after('<div class="block" id="block'+nextID+'"><textarea class="query" rows="1" onchange="process_block('+nextID+')"></textarea><div class="answer"></div></div>');
-				$('#block'+nextID+' > .query').bind("keyup", block_keyup)
-            .bind("focus", resize_text_area);
+				$('#block'+nextID+' > .query').bind("keyup", query_changed)
+            .bind("focus", query_changed);
         $('#block'+nextID+' > .query').focus();
         nextID++;
     }

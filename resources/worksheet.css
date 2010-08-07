@@ -55,18 +55,27 @@ table.results tr td {
     background: #afa;
 }
 
-/* Block styles */
+.error > .answer {
+    color: #f00;
+}
 
-.block-header > textarea {
+/* Block type styles */
+
+.b-header > textarea {
     color: #060;
     font: large sans-serif;
 }
 
-.block-text > textarea {
+.b-text > textarea {
     font: small sans-serif;
 }
 
-.block-remotequery > textarea {
+.b-remotequery > textarea {
     color: #4a4;
+    font: monospace;
+}
+
+.b-localquery > textarea {
+    color: #44a;
     font: monospace;
 }
