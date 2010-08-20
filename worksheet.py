@@ -3,6 +3,7 @@
 # SQL Worksheets - a simple interface for querying databases
 # (c) 2010 Rob Hague
 
+from wsfile import WorksheetStorage
 import re, BaseHTTPServer, optparse, sys, config, os
 from urlparse import urlparse, parse_qs
 
@@ -15,11 +16,12 @@ base_page_HTML = """<html>
     <script type="text/javascript" src="?resource=worksheet.js"></script>
     <link rel="stylesheet" type="text/css" href="?resource=worksheet.css">
   </head>
-  <body onload="add_query('#top')">
-    <div class="watermark">Worksheet</div>
+  <body onload="initialise('%(path)s')">
+    <div class="watermark">Worksheet %(path)s</div>
     <div class="title">%(title)s</div>
     <a id="top"></a>
 
+    <a id="bottom"></a>
     <!-- There needs to be a link at the bottom of the page, to catch
     the input focus as it leaves the last block. Note that this
     doesn't work on Safari or Chrome, so is only a temporary
@@ -34,13 +36,14 @@ not_found_HTML = """<html>
     <title>Resouce not found: %(resource)s</title>
   </head>
   <body>
-    <center>
-      <h1>Resource Not Found</h1>
-      <p>The resource %(resource)s could not be found.
-    </center>
+    <h1>Resource Not Found</h1>
+    <p>The resource %(resource)s could not be found.</p>
   </body>
 </html>
 """
+
+# Regular expressions
+worksheet_path_RE = re.compile(r'^(/[-\w]+)+/?$')
 
 # Simple JSON generation, as the json module is not included in older
 # versions of Python.
@@ -63,6 +66,15 @@ def str_JSON(obj):
 def worksheet_handler(db, options):
     """Create a worksheet request handler class, closed over a DB and
     an object representing command line options."""
+
+    worksheets = {}
+    def find_worksheet(path):
+        ''''Return the worksheet object for the given path, creating
+        it if necessary.'''
+        if not worksheets.has_key(path):
+            worksheets[path] = WorksheetStorage(path)
+            print 'Opened worksheet %s' % path
+        return worksheets[path]
 
     class WorksheetRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """A HTTP request handler to display an SQL worksheet"""
@@ -98,7 +110,8 @@ def worksheet_handler(db, options):
             """Respond to a single HTTP request; called by the HTTP server"""
 
             if self.allow_request():
-                params = parse_qs(urlparse(self.path).query)
+                url = urlparse(self.path)
+                params = parse_qs(url.query)
                 
                 if params.has_key('resource'):
                     filename = params['resource'][0]
@@ -109,13 +122,17 @@ def worksheet_handler(db, options):
                                             {'Content-type': 'text/plain'})
                         self.wfile.write(open(filepath).read());
                     else:
-                        self.start_response(404, 'Not found',
-                                            {'Content-type': 'text/html'})
-                        self.wfile.write(not_found_HTML % {'resource': filename})
-                else:
+                        self.not_found()
+                elif url.path == '/':
+                    self.start_response(200, 'OK',
+                                        {'Content-type': 'text/html'})
+                    self.generate_index_page(self.wfile)
+                elif worksheet_path_RE.match(url.path):
                     self.start_response(200, 'OK',
                                         {'Content-type': 'text/html'})
                     self.wfile.write(self.generate_base_page(self.path, params))
+                else:
+                    self.not_found()
 
         def do_POST(self):
             if self.allow_request():
@@ -125,10 +142,19 @@ def worksheet_handler(db, options):
                 self.start_response(200, 'OK',
                                     {'Content-type': 'text/plain'})
                 self.wfile.write(to_JSON(db.query(post_params['sql_query'])))
+            elif (worksheet_path_RE.match(self.path) and
+                  post_params.has_key('init')):
+                try:
+                    ws_file_path = os.path.expanduser(options.dir+self.path)
+                    worksheet = find_worksheet(ws_file_path)
+                    self.start_response(200, 'OK',
+                                        {'Content-type': 'text/plain'})
+                    worksheet.serialise(self.wfile)
+                except:
+                    print sys.exc_info()[1]
+                    self.not_found()
             else:
-                self.start_response(404, 'Not Found',
-                                    {'Content-type': 'text/plain'})
-                self.wfile.write(not_found_HTML % {'resource': self.path})
+                self.not_found()
                 
         def start_response(self, code, msg, headers):
             self.send_response(code, msg)
@@ -136,9 +162,18 @@ def worksheet_handler(db, options):
                 self.send_header(k,v)
             self.end_headers()
 
+        def not_found(self):
+            self.start_response(404, 'Not Found',
+                                {'Content-type': 'text/html'})
+            self.wfile.write(not_found_HTML % {'resource': self.path})
+            
         def generate_base_page(self, path, params):
-            """Generate the initial HTML page"""
-            return base_page_HTML % {'title': db.title()}
+            'Generate the initial HTML page'
+            return base_page_HTML % {'title': db.title(), 'path': self.path}
+
+        def generate_index_page(self, target):
+            'Write out an index page for the served directory.'
+            target.write('<i>Index not yet implemented...</i>')
 
     return WorksheetRequestHandler 
 
@@ -150,6 +185,7 @@ def start_worksheet_server(DbClass, args):
     parser.add_option('-p', '--port', type='int', default=8000)
     parser.add_option('-a', '--accept', action='append', default=['127.0.0.1'])
     parser.add_option('-b', '--basic-auth', action="store_true")
+    parser.add_option('-d', '--dir', default='.')
     (options, args) = parser.parse_args(args[1:])
 
     # Create a database, passing in the remaining arguments

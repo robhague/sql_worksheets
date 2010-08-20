@@ -106,12 +106,17 @@ function process_block(blockID) {
  */
 var add_query = function() {
     var nextID = 1;
-    return function(afterSelector) {
+    return function(afterSelector, query, answer) {
         $(afterSelector).after('<div class="block" id="block'+nextID+'"><textarea class="query" rows="1" onchange="process_block('+nextID+')"></textarea><div class="answer"></div></div>');
-				$('#block'+nextID+' > .query').bind("keyup", query_changed)
-            .bind("focus", query_changed);
-        $('#block'+nextID+' > .query').focus();
+				$('#block'+nextID+' > .query')
+            .bind("keyup", query_changed)
+            .bind("focus", query_changed)
+            .html(query);
+        var newSelector = '#block'+nextID;
+        $(newSelector+' > .query').focus();
+        $(newSelector+' > .answer').html(answer);
         nextID++;
+        return newSelector;
     }
 }();
 
@@ -154,4 +159,17 @@ function receive_response(blockID) {
             queryElement.focus();
         }
     };
+}
+
+function initialise(path) {
+    ajax_request(path, 'init=1',function(initial_doc) {
+            var nextId = '#top';
+            var initial_json = json_parse(initial_doc);
+            var contents = initial_json['contents'];
+            for(var i = 0; i < contents.length; i++) {
+                var item = contents[i];
+                nextId = add_query(nextId, item.query, item.answer);
+            }
+            add_query(nextId);
+        });
 }
