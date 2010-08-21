@@ -24,7 +24,7 @@ class SqliteDB:
         c = self.conn.cursor()
         result = {}
         try:
-            r =  c.execute(' '.join(query))
+            r =  c.execute(query)
             result['headings'] = [item[0] for item in r.description]
             result['result'] = r.fetchall()
         except Exception:

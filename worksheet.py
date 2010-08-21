@@ -79,32 +79,7 @@ def worksheet_handler(db, options):
     class WorksheetRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """A HTTP request handler to display an SQL worksheet"""
 
-        def allow_request(self):
-            # Check request originates from a permitted host
-            if self.client_address[0] not in options.accept:
-                self.start_response(403, 'Forbidden',
-                                    {'Content-type' : 'text/plain'})
-                self.wfile.write("This server cannot be accessed remotely.")
-                return 0
-            
-            # Check authentication if necessary
-            if (options.basic_auth):
-                if self.headers.has_key('Authorization'):
-                    auth = self.headers['Authorization'].split(' ',1)
-                    target = (config.login+':'+config.password)
-                    target = target.encode('base64').strip()
-                    if (len(auth) == 2 and auth[0] == 'Basic' and
-                        auth[1] == target):
-                        return 1
-                    
-                self.start_response(
-                    401, 'Authorization Required',
-                    {'Content-type': 'text/plain',
-                     'WWW-Authenticate': 'Basic realm="Worksheet"'})
-                return 0
-
-            # OK
-            return 1
+        # Dispatchers
 
         def do_GET(self):
             """Respond to a single HTTP request; called by the HTTP server"""
@@ -137,25 +112,70 @@ def worksheet_handler(db, options):
         def do_POST(self):
             if self.allow_request():
                 content_length = int(self.headers['Content-length'])
-                post_params = parse_qs(self.rfile.read(content_length))        
-            if post_params.has_key('sql_query'):
-                self.start_response(200, 'OK',
-                                    {'Content-type': 'text/plain'})
-                self.wfile.write(to_JSON(db.query(post_params['sql_query'])))
-            elif (worksheet_path_RE.match(self.path) and
-                  post_params.has_key('init')):
-                try:
-                    ws_file_path = os.path.expanduser(options.dir+self.path)
-                    worksheet = find_worksheet(ws_file_path)
-                    self.start_response(200, 'OK',
-                                        {'Content-type': 'text/plain'})
-                    worksheet.serialise(self.wfile)
-                except:
-                    print sys.exc_info()[1]
-                    self.not_found()
+                post_params = parse_qs(self.rfile.read(content_length))
+   
+            method = 'action_' + post_params.get('action', ['default'])[0]
+            if worksheet_path_RE.match(self.path) and hasattr(self, method):
+                ws_file_path = os.path.expanduser(options.dir+self.path)
+                worksheet = find_worksheet(ws_file_path)
+                getattr(self, method)(worksheet, post_params)
             else:
                 self.not_found()
-                
+
+        # POST actions
+
+        def action_init(self, worksheet, post_params):
+            try:
+                self.start_response(200, 'OK',
+                                    {'Content-type': 'text/plain'})
+                worksheet.serialise(self.wfile)
+            except:
+                print sys.exc_info()[1]
+                self.not_found()
+
+        def action_update(self, worksheet, post_params):
+            self.start_response(200, 'OK',
+                                    {'Content-type': 'text/plain'})
+            block = post_params['block'][0]
+            query = ' '.join(post_params.get('query', []))
+            answer = ' '.join(post_params.get('answer', []))
+            if query[0] == '?':
+                sql = query[1:]
+                response = to_JSON(db.query(sql))
+                answer = '#SQL' # FIXME
+            else:
+                response = '{"status": "OK"}'
+            worksheet.update(block, query, answer)
+            self.wfile.write(response)
+
+        # Utility methods
+        def allow_request(self):
+            # Check request originates from a permitted host
+            if self.client_address[0] not in options.accept:
+                self.start_response(403, 'Forbidden',
+                                    {'Content-type' : 'text/plain'})
+                self.wfile.write("This server cannot be accessed remotely.")
+                return 0
+            
+            # Check authentication if necessary
+            if (options.basic_auth):
+                if self.headers.has_key('Authorization'):
+                    auth = self.headers['Authorization'].split(' ',1)
+                    target = (config.login+':'+config.password)
+                    target = target.encode('base64').strip()
+                    if (len(auth) == 2 and auth[0] == 'Basic' and
+                        auth[1] == target):
+                        return 1
+                    
+                self.start_response(
+                    401, 'Authorization Required',
+                    {'Content-type': 'text/plain',
+                     'WWW-Authenticate': 'Basic realm="Worksheet"'})
+                return 0
+
+            # OK
+            return 1
+
         def start_response(self, code, msg, headers):
             self.send_response(code, msg)
             for (k,v) in headers.items():

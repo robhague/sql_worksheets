@@ -42,10 +42,16 @@ class WorksheetStorage:
         target.write('  "contents" : [')
         target.write(','.join(
                 ['{ "blockid":"%d","seq":"%d","query":"%s","answer":"%s"}' %
-                 (blockid, seq, text, answer)
-                 for (blockid, seq, text, answer) in c]))
+                 (blockid, seq, query, answer)
+                 for (blockid, seq, query, answer) in c]))
         target.write(']\n}\n')
         c.close()
+
+    def update(self, blockid, query, answer):
+        self.sql('''INSERT OR REPLACE
+                    INTO blocks (blockid, seq, query, answer)
+                    VALUES (?, ?, ?, ?)''', 
+                  (blockid, 0, query, answer))
 
 def createWorksheet(dirname, force):
     'Set up a Worksheet'
@@ -64,10 +70,6 @@ def createWorksheet(dirname, force):
     worksheet.sql('''CREATE TABLE blocks (blockid int, seq int, query text,
                                           answer text,
                                           PRIMARY KEY (blockid, seq))''');
-
-    # Test data
-    worksheet.sql('INSERT INTO blocks VALUES (?, ?, ?, ?)', 
-                  (0, 0, '#New Worksheet', ''))
     return worksheet
 
 

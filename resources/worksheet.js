@@ -76,16 +76,11 @@ function process_block(blockID) {
     var queryElement = blockElement.find('> .query');
     var answerElement = blockElement.find('> .answer');
     var query = queryElement.val();
-    answerElement.html('');
+    var answer = '';
     blockElement.removeClass('value error');
 
-    switch (query[0]) {
-    case '?': // SQL query
-        ajax_request('.', 'sql_query='+encodeURIComponent(query.substring(1)),
-                     receive_response(blockID));
-        break;
-    case '=': // Javascript expression
-        var answer;
+    // Javascript expression
+    if (query[0] =='=') {
         try {
             answer = eval(query.substring(1));
             blockElement.addClass('value');
@@ -93,10 +88,14 @@ function process_block(blockID) {
             answer = ''+e;
             blockElement.addClass('error');
         }
-        answerElement.html(answer);
-        break;
-    default: // Non-processing block
     }
+
+    answerElement.html(answer);
+
+    var params =
+        'action=update&block='+blockID+'&query='+encodeURIComponent(query);
+    if (answer != '') { params += '&answer='+encodeURIComponent(answer); }
+    ajax_request('.', params, receive_response(blockID));
 
     addBlockAfter(blockID);
 }
@@ -152,7 +151,7 @@ function receive_response(blockID) {
             answerElement.html(result+'</table>');
             blockElement.removeClass('error');
             blockElement.addClass('value');
-        } else {
+        } else if (answer['error']) {
             answerElement.text(String(answer['error']));
             blockElement.removeClass('value');
             blockElement.addClass('error');
@@ -162,7 +161,7 @@ function receive_response(blockID) {
 }
 
 function initialise(path) {
-    ajax_request(path, 'init=1',function(initial_doc) {
+    ajax_request(path, 'action=init',function(initial_doc) {
             var nextId = '#top';
             var initial_json = json_parse(initial_doc);
             var contents = initial_json['contents'];
