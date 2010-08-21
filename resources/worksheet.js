@@ -134,7 +134,7 @@ function receive_response(blockID) {
         var blockElement = $('#block'+blockID);
         var queryElement = $('#block'+blockID+' > .query');
         var answerElement = $('#block'+blockID+' > .answer');
-        var answer = json_parse(answerJSON);
+        var answer = jQuery.parseJSON(answerJSON);
         if (answer['result']) {
             var result = '<table class="results"><tr>';
             for(var heading in answer['headings']) {
@@ -163,7 +163,7 @@ function receive_response(blockID) {
 function initialise(path) {
     ajax_request(path, 'action=init',function(initial_doc) {
             var nextId = '#top';
-            var initial_json = json_parse(initial_doc);
+            var initial_json = jQuery.parseJSON(initial_doc);
             var contents = initial_json['contents'];
             for(var i = 0; i < contents.length; i++) {
                 var item = contents[i];

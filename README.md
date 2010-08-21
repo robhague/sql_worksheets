@@ -31,7 +31,6 @@ The driver script `dummy_worksheet` provides a trivial example.
 The following third-party libraries are included:
 
 - JQuery (MIT Licence) - http://jquery.com/
-- json_parser.js (Public domain) - http://www.json.org/
 
 # Licence
 
