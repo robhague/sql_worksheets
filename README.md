@@ -9,11 +9,29 @@ Worksheets provide a simple browser-based interface to databases (and potentiall
 
 # Running Worksheets
 
-The worksheets script is not run directly; instead, each supported database type has an associated driver script. To start a server, run the driver script, passing the necessary information to specify the database  (for example, a filename or hostname). For example:
+The worksheets script is not run directly; instead, each supported database type has an associated driver script. To start a server, run the driver script, passing the necessary information to specify the database (for example, a filename or hostname). For example:
 
-    sqlite_worksheet mydb.sqlite 8000
+    sqlite_worksheet mydb.sqlite
 
-The above command line runs a server on port 8001, using the database file "mydb.sqlite" to respond to queries. To use the worksheet, visit the URL `http://localhost:8000`.
+The above command line runs a server on port 8000, using the database file "mydb.sqlite" to respond to queries. To use the worksheet, visit the URL `http://localhost:8000`. A different port  may be specified using the `-p/--port` argument, for example:
+
+    sqlite_worksheet mydb.sqlite -p8080
+
+By default, the server only accepts connections from the local machine. The `-a/--accept` argument may be used to specify additional IP addresses from which connections are accepted. It may be used multiple times to specify several hosts. For example:
+
+    sqlite_worksheet mydb.sqlite -p8000 -a198.162.0.100
+
+If the `-b/--basic-auth` switch is specified, HTTP Basic authentication is used. Note that this authentication method sends passwords in the clear, so only use it on private networks, or secured using an external mechanism such as an SSL proxy or SSH tunnel. To specify a password, create a file called .worksheet.py in your home directory, and add the following line:
+
+    password = "<your_password>"
+
+This obviously leaves your password in plain text, so do not use the same password for anything important, and set permissions on the file so that nobody else can read it. Better password storage, and a stronger authentication mechanism, will be implemented in future versions.
+
+By default, the server serves worksheets from the current directory and its descendants. To server worksheets from another directory, use the -d/--dir argument:
+
+    sqlite_worksheet mydb.sqlite -d~/my_worksheets
+    
+Each worksheet consists of a directory containing a file named `WORKSHEET`, plus any additional files required for the contents of that worksheet.
 
 # Adding Support For New Database Types
 
