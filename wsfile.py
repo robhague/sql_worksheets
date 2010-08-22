@@ -41,7 +41,7 @@ class WorksheetStorage:
         c.execute('select * from blocks order by blockid')
         target.write('  "contents" : [')
         target.write(','.join(
-                ['{ "blockid":"%d","seq":"%d","query":"%s","answer":"%s"}' %
+                ['{ "blockid":"%d","seq":"%d","query":"%s","answer":%s}' %
                  (blockid, seq, query, answer)
                  for (blockid, seq, query, answer) in c]))
         target.write(']\n}\n')

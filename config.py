@@ -14,4 +14,3 @@ try:
     execfile(os.path.expanduser('~/.worksheet.py'))
 except:
     pass
-

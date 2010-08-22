@@ -26,9 +26,11 @@ class SqliteDB:
         try:
             r =  c.execute(query)
             result['headings'] = [item[0] for item in r.description]
-            result['result'] = r.fetchall()
+            result['value'] = r.fetchall()
+            result['status'] = "OK"
         except Exception:
-            result['error'] = "SQL error: "+str(sys.exc_info()[1])
+            result['status'] = "error"
+            result['value'] = "SQL error: "+str(sys.exc_info()[1])
         c.close()
         return result
 

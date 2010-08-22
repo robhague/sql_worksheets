@@ -141,9 +141,9 @@ def worksheet_handler(db, options):
             if query[0] == '?':
                 sql = query[1:]
                 response = to_JSON(db.query(sql))
-                answer = '#SQL' # FIXME
+                answer = response
             else:
-                response = '{"status": "OK"}'
+                response = '{}'
             worksheet.update(block, query, answer)
             self.wfile.write(response)
 

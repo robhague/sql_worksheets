@@ -76,25 +76,29 @@ function process_block(blockID) {
     var queryElement = blockElement.find('> .query');
     var answerElement = blockElement.find('> .answer');
     var query = queryElement.val();
-    var answer = '';
-    blockElement.removeClass('value error');
+    var answer = {};
 
     // Javascript expression
     if (query[0] =='=') {
         try {
-            answer = eval(query.substring(1));
+            answer['status'] = 'OK';
+            answer['value'] = eval(query.substring(1));
             blockElement.addClass('value');
         } catch (e) {
-            answer = ''+e;
+            answer['status'] = 'error';
+            answer['value'] = ''+e;
             blockElement.addClass('error');
         }
     }
 
-    answerElement.html(answer);
+    update_block(answer, blockElement);
+
+    var answerString = JSON.stringify(answer);
 
     var params =
-        'action=update&block='+blockID+'&query='+encodeURIComponent(query);
-    if (answer != '') { params += '&answer='+encodeURIComponent(answer); }
+        'action=update&block=' + blockID +
+        '&query=' + encodeURIComponent(query) +
+        '&answer=' + encodeURIComponent(answerString);
     ajax_request('.', params, receive_response(blockID));
 
     addBlockAfter(blockID);
@@ -113,7 +117,9 @@ var add_query = function() {
             .html(query);
         var newSelector = '#block'+nextID;
         $(newSelector+' > .query').focus();
-        $(newSelector+' > .answer').html(answer);
+        if (answer) {
+            update_block(answer, $(newSelector));
+        }
         nextID++;
         return newSelector;
     }
@@ -132,32 +138,43 @@ function addBlockAfter(blockID) {
 function receive_response(blockID) {
     return function(answerJSON) {
         var blockElement = $('#block'+blockID);
-        var queryElement = $('#block'+blockID+' > .query');
-        var answerElement = $('#block'+blockID+' > .answer');
         var answer = jQuery.parseJSON(answerJSON);
-        if (answer['result']) {
-            var result = '<table class="results"><tr>';
-            for(var heading in answer['headings']) {
-                result += '<th>'+answer['headings'][heading]+'</th>'
-            }
-            result += '</tr>'
-            for(var row in answer['result']) {
-                result += '<tr>';
-                for(var column in answer['result'][row]) {
-                    result += '<td>'+answer['result'][row][column]+'</td>';
-                }
-                result += '</tr>';
-            }
-            answerElement.html(result+'</table>');
-            blockElement.removeClass('error');
-            blockElement.addClass('value');
-        } else if (answer['error']) {
-            answerElement.text(String(answer['error']));
-            blockElement.removeClass('value');
-            blockElement.addClass('error');
-            queryElement.focus();
-        }
+        update_block(answer, blockElement);
     };
+}
+
+function update_block(answer, blockElement)
+{
+    var answerElement = $(blockElement).find('> .answer');
+    if (answer['headings']) {
+        var result = '<table class="results"><tr>';
+        for(var heading in answer['headings']) {
+            result += '<th>'+answer['headings'][heading]+'</th>';
+        }
+        result += '</tr>';
+        for(var row in answer['value']) {
+            result += '<tr>';
+            for(var column in answer['value'][row]) {
+                result += '<td>'+answer['value'][row][column]+'</td>';
+            }
+            result += '</tr>';
+        }
+        answerElement.html(result+'</table>');
+    } else if (answer['value']) {
+        answerElement.text(String(answer['value']));   
+    }
+
+    switch (answer['status']) {
+    case 'OK':
+        blockElement.removeClass('error');
+        blockElement.addClass('value');
+        break;
+    case 'error':
+        blockElement.removeClass('value');
+        blockElement.addClass('error');
+        $(blockElement).find('> .query').focus();
+        break;
+    }
 }
 
 function initialise(path) {
