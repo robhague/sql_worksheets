@@ -11,6 +11,7 @@ from urlparse import urlparse, parse_qs
 base_page_HTML = """<html>
   <head>
     <title>%(title)s</title>
+    <script type="text/javascript" src="?resource=json2_min.js"></script>
     <script type="text/javascript" src="?resource=jquery.js"></script>
     <script type="text/javascript" src="?resource=worksheet.js"></script>
     <link rel="stylesheet" type="text/css" href="?resource=worksheet.css">
