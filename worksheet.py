@@ -193,7 +193,15 @@ def worksheet_handler(db, options):
 
         def generate_index_page(self, target):
             'Write out an index page for the served directory.'
-            target.write('<i>Index not yet implemented...</i>')
+            target.write('<html><head><title>Worksheets</title></head><body>')
+            target.write('<h1>Worksheets in %s</h1>' % options.dir)
+            dir_path = os.path.expanduser(options.dir)
+            for root, dirs, files in os.walk(dir_path):
+                if 'WORKSHEET' in files:
+                    relpath = os.path.relpath(root, dir_path)
+                    target.write('<li><a href="%s">%s</a></li>' %
+                                 (relpath, relpath))
+            target.write('</body></html')
 
     return WorksheetRequestHandler 
 
