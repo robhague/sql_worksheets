@@ -42,6 +42,20 @@ not_found_HTML = """<html>
 </html>
 """
 
+index_HTML = """
+<html>
+  <head>
+    <title>%(dir)s - Worksheets</title>
+  </head>
+  <body>
+    <h1>%(dir)s</h1>
+    <ul>
+      %(list_items)s
+    </ul>
+  </body>
+<html>
+"""
+
 # Regular expressions
 worksheet_path_RE = re.compile(r'^(/[-\w]+)+/?$')
 
@@ -193,15 +207,14 @@ def worksheet_handler(db, options):
 
         def generate_index_page(self, target):
             'Write out an index page for the served directory.'
-            target.write('<html><head><title>Worksheets</title></head><body>')
-            target.write('<h1>Worksheets in %s</h1>' % options.dir)
             dir_path = os.path.expanduser(options.dir)
-            for root, dirs, files in os.walk(dir_path):
-                if 'WORKSHEET' in files:
-                    relpath = os.path.relpath(root, dir_path)
-                    target.write('<li><a href="%s">%s</a></li>' %
-                                 (relpath, relpath))
-            target.write('</body></html')
+            paths = [os.path.relpath(p[0], dir_path) for p in os.walk(dir_path)
+                     if 'WORKSHEET' in p[2]]
+            list_items = [('<li><a href="%s">%s</a></li>' % (p, p))
+                          for p in paths]
+            target.write(index_HTML %
+                         {'dir': options.dir,
+                          'list_items': '\n    '.join(list_items)})
 
     return WorksheetRequestHandler 
 
