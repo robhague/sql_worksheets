@@ -99,7 +99,7 @@ function process_block(blockID) {
         'action=update&block=' + blockID +
         '&query=' + encodeURIComponent(query) +
         '&answer=' + encodeURIComponent(answerString);
-    ajax_request('.', params, receive_response(blockID));
+    ajax_request(window.location, params, receive_response(blockID));
 
     addBlockAfter(blockID);
 }
