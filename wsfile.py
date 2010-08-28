@@ -52,26 +52,26 @@ class WorksheetStorage:
                     INTO blocks (blockid, seq, query, answer)
                     VALUES (?, ?, ?, ?)''', 
                   (blockid, 0, query, answer))
-
-def createWorksheet(dirname, force):
-    'Set up a Worksheet'
-    if os.path.exists(dirname):
-        if not os.path.isdir(dirname): Exception(dirname+" is not a directory")
-    else:
-        os.makedirs(dirname)
-    dbfilename = os.path.join(dirname, 'WORKSHEET')
-    if os.path.exists(dbfilename):
-        if force:
-            os.remove(dbfilename)
+    @classmethod
+    def create_worksheet(cls, dirname, force):
+        'Set up a Worksheet'
+        if os.path.exists(dirname):
+            if not os.path.isdir(dirname):
+                raise Exception(dirname+" is not a directory")
         else:
-            raise Exception('Worksheet already exists at '+dirname)
-
-    worksheet = WorksheetStorage(dirname)
-    worksheet.sql('''CREATE TABLE blocks (blockid int, seq int, query text,
-                                          answer text,
-                                          PRIMARY KEY (blockid, seq))''');
-    return worksheet
-
+            os.makedirs(dirname)
+        dbfilename = os.path.join(dirname, 'WORKSHEET')
+        if os.path.exists(dbfilename):
+            if force:
+                os.remove(dbfilename)
+            else:
+                raise Exception('Worksheet already exists at '+dirname)
+    
+        worksheet = WorksheetStorage(dirname)
+        worksheet.sql('''CREATE TABLE blocks (blockid int, seq int, query text,
+                                              answer text,
+                                              PRIMARY KEY (blockid, seq))''');
+        return worksheet
 
 if __name__ == '__main__':
     # Parse arguments
@@ -88,7 +88,8 @@ if __name__ == '__main__':
         worksheetName = args[0]
         # Create the worksheet, if required. Otherwise, open it.
         if (options.create):
-            worksheet = createWorksheet(worksheetName, options.force)
+            worksheet = WorksheetStorage.create_worksheet(worksheetName,
+                                                          options.force)
         else:
             worksheet = WorksheetStorage(worksheetName)
 

@@ -17,6 +17,53 @@ function ajax_request(path, value, response) {
 }
 
 /*
+ * Index page functions.
+ */
+
+function substring_match(term) {
+    return function() { return $(this).text().indexOf(term) == -1; };
+}
+
+function inverse(fn) {
+    return function() { return !fn.apply(this, arguments); };
+}
+
+function check_worksheet_name(name) {
+    return /^[-\w]+(:?\/[-\w]+)*$/.exec(name);
+}
+
+function search_term_changed(event, value) {
+    filter_items(event, value, '.index_entry', open_or_create);
+    $('#create').attr('disabled', !check_worksheet_name(value));
+}
+
+function filter_items(event, term, item_selector, accept) {
+    $(item_selector).show().filter(substring_match(term)).hide();
+    if (event.keyCode == 13 && accept) {
+        accept(item_selector, term);
+    }
+}
+
+function open_or_create(selector, term) {
+    var items = $(selector).filter(inverse(substring_match(term)));
+    if (items.length == 0 && check_worksheet_name(term)) {
+        $('#create').focus();
+    } else if (items.length == 1) {
+        window.location = items.find('> a')[0].href;
+    }
+}
+
+function create_worksheet() {
+    var term = $('#search').val();
+    var url = window.location+term;
+    jQuery.ajax({
+        type: 'POST', url: url, data: { action: 'create' },
+        success: function() { window.location = url; },
+        error: function(xhr) { alert(xhr.responseText); }
+    });
+}
+
+/*
  * Textarea autoresizer code adapted from: 
  *   http://www.sitepoint.com/blogs/2009/07/29/build-auto-expanding-textarea-1/
  */
@@ -122,7 +169,7 @@ var add_query = function() {
         }
         nextID++;
         return newSelector;
-    }
+    };
 }();
 
 function addBlockAfter(blockID) {

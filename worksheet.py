@@ -46,9 +46,14 @@ index_HTML = """
 <html>
   <head>
     <title>%(dir)s - Worksheets</title>
+    <script type="text/javascript" src="?resource=jquery.js"></script>
+    <script type="text/javascript" src="?resource=worksheet.js"></script>    
   </head>
   <body>
     <h1>%(dir)s</h1>
+    <input id="search" onkeyup="search_term_changed(event, this.value)">
+    <input id="create" type="submit" value="Create"
+           onclick="create_worksheet()">
     <ul>
       %(list_items)s
     </ul>
@@ -83,12 +88,23 @@ def worksheet_handler(db, options):
 
     worksheets = {}
     def find_worksheet(path):
-        ''''Return the worksheet object for the given path, creating
+        '''Return the worksheet object for the given path, creating
         it if necessary.'''
         if not worksheets.has_key(path):
             worksheets[path] = WorksheetStorage(path)
             print 'Opened worksheet %s' % path
         return worksheets[path]
+
+    def create_worksheet(path):
+        '''Attempt to create and cache a worksheet object, returning it
+         if successful.'''
+        print 'Creating worksheet '+path
+        if worksheets.has_key(path):
+            raise Exception("Worksheet already exists")
+        else:
+            worksheet = WorksheetStorage.create_worksheet(path, 0)
+            worksheets[path] = worksheet
+            return worksheet
 
     class WorksheetRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         """A HTTP request handler to display an SQL worksheet"""
@@ -130,22 +146,31 @@ def worksheet_handler(db, options):
    
             method = 'action_' + post_params.get('action', ['default'])[0]
             if worksheet_path_RE.match(self.path) and hasattr(self, method):
-                ws_file_path = os.path.expanduser(options.dir+self.path)
-                worksheet = find_worksheet(ws_file_path)
-                getattr(self, method)(worksheet, post_params)
+                try:
+                    ws_file_path = os.path.expanduser(options.dir+self.path)
+                    if method == 'action_create':
+                        worksheet = create_worksheet(ws_file_path)
+                    else:
+                        worksheet = find_worksheet(ws_file_path)
+                    getattr(self, method)(worksheet, post_params)
+                except:
+                    self.bad_request(sys.exc_info()[1])
             else:
                 self.not_found()
 
         # POST actions
 
+        def action_create(self, worksheet, post_params):
+            # If processing has reached this point, the worksheet has
+            # been successfully created.
+            self.start_response(200, 'OK',
+                                {'Content-type': 'text/plain'})
+            self.wfile.write('created')
+
         def action_init(self, worksheet, post_params):
-            try:
-                self.start_response(200, 'OK',
-                                    {'Content-type': 'text/plain'})
-                worksheet.serialise(self.wfile)
-            except:
-                print sys.exc_info()[1]
-                self.not_found()
+            self.start_response(200, 'OK',
+                                {'Content-type': 'text/plain'})
+            worksheet.serialise(self.wfile)
 
         def action_update(self, worksheet, post_params):
             self.start_response(200, 'OK',
@@ -200,6 +225,11 @@ def worksheet_handler(db, options):
             self.start_response(404, 'Not Found',
                                 {'Content-type': 'text/html'})
             self.wfile.write(not_found_HTML % {'resource': self.path})
+
+        def bad_request(self, reason):
+            self.start_response(400, 'Bad request',
+                                {'Content-type': 'text/plain'})
+            self.wfile.write(reason)
             
         def generate_base_page(self, path, params):
             'Generate the initial HTML page'
@@ -210,7 +240,8 @@ def worksheet_handler(db, options):
             dir_path = os.path.expanduser(options.dir)
             paths = [os.path.relpath(p[0], dir_path) for p in os.walk(dir_path)
                      if 'WORKSHEET' in p[2]]
-            list_items = [('<li><a href="%s">%s</a></li>' % (p, p))
+            list_items = [('<li class="index_entry"><a href="%s">%s</a></li>' %
+                           (p, p))
                           for p in paths]
             target.write(index_HTML %
                          {'dir': options.dir,
