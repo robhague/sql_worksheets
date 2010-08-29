@@ -17,8 +17,7 @@ base_page_HTML = """<html>
     <link rel="stylesheet" type="text/css" href="?resource=worksheet.css">
   </head>
   <body onload="initialise('%(path)s')">
-    <div class="watermark">Worksheet %(path)s</div>
-    <div class="title">%(title)s</div>
+    <div class="title">%(title)s - %(path)s</div>
     <a id="top"></a>
 
     <a id="bottom"></a>
@@ -48,15 +47,18 @@ index_HTML = """
     <title>%(dir)s - Worksheets</title>
     <script type="text/javascript" src="?resource=jquery.js"></script>
     <script type="text/javascript" src="?resource=worksheet.js"></script>    
+    <link rel="stylesheet" type="text/css" href="?resource=worksheet.css">
   </head>
   <body>
-    <h1>%(dir)s</h1>
-    <input id="search" onkeyup="search_term_changed(event, this.value)">
-    <input id="create" type="submit" value="Create"
-           onclick="create_worksheet()">
-    <ul>
+    <div class="index">
+      <h1>%(dir)s</h1>
+      <div class="search_box">
+        <input id="search" onkeyup="search_term_changed(event, this.value)">
+        <input id="create" type="submit" value="Create"
+               onclick="create_worksheet()">
+      </div>
       %(list_items)s
-    </ul>
+    </div>
   </body>
 <html>
 """
@@ -240,8 +242,8 @@ def worksheet_handler(db, options):
             dir_path = os.path.expanduser(options.dir)
             paths = [os.path.relpath(p[0], dir_path) for p in os.walk(dir_path)
                      if 'WORKSHEET' in p[2]]
-            list_items = [('<li class="index_entry"><a href="%s">%s</a></li>' %
-                           (p, p))
+            list_items = [('<a href="%s"><div class="index_entry">%s</div></a>'
+                           % (p, p))
                           for p in paths]
             target.write(index_HTML %
                          {'dir': options.dir,
