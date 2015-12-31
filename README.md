@@ -1,6 +1,6 @@
-# Worksheets - a browser-based interface
+# SQL Worksheets - a browser-based interface
 
-Worksheets provide a simple browser-based interface to databases (and potentially other services). The user types queries into a text area, and the response is shown below. The worksheet provides a record of queries, and allows queries to be edited and resubmitted.
+SQL Worksheets provide a simple browser-based interface to databases (and potentially other services). The user types queries into a text area, and the response is shown below. The worksheet provides a record of queries, and allows queries to be edited and resubmitted.
 
 # Requirements
 
